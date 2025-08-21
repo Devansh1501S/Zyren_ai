@@ -12,7 +12,7 @@ This repository contains the Zyren Chat application, a modern AI chat interface 
 
 Your project is live at:
 
-**[https://vercel.com/devansh-shuklas-projects-fca75b43/v0-no-messages](https://vercel.com/devansh-shuklas-projects-fca75b43/v0-no-messages)**
+**[https://vercel.com/devansh-shuklas-projects-fca75b43/v0-no-messages](https://zyren-ai-delta.vercel.app/)**
 
 ## Features
 
