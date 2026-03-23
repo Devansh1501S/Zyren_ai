@@ -6,12 +6,12 @@ export default function Home() {
       <ChatInterface />
 
       {/* Environment Variable Setup Notice */}
-      {!process.env.GEMINI_API_KEY && (
+      {!process.env.GROQ_API_KEY && (
         <div className="fixed bottom-4 right-4 max-w-sm">
           <div className="glass-strong p-4 rounded-lg border border-destructive/20 bg-destructive/5">
             <h3 className="font-semibold text-destructive mb-2">Setup Required</h3>
             <p className="text-sm text-muted-foreground">
-              Add your <code className="bg-muted px-1 rounded">GEMINI_API_KEY</code> environment variable to enable AI
+              Add your <code className="bg-muted px-1 rounded">GROQ_API_KEY</code> environment variable to enable AI
               responses.
             </p>
           </div>

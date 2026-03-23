@@ -1,7 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { GoogleGenerativeAI } from "@google/generative-ai"
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+import Groq from "groq-sdk"
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,13 +9,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 })
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" })
+    if (!process.env.GROQ_API_KEY) {
+      return NextResponse.json({ error: "Groq API key not configured" }, { status: 500 })
+    }
+
+    const groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY,
+    })
 
     const prompt = `Generate a short, descriptive title (maximum 4-5 words) for a chat conversation that starts with this message: "${message}". The title should capture the main topic or intent. Only return the title, nothing else.`
 
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const title = response.text().trim()
+    const completion = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.3-70b-versatile",
+    })
+
+    const title = completion.choices[0]?.message?.content?.trim() || "New Chat"
 
     return NextResponse.json({ title })
   } catch (error) {

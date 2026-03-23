@@ -1,87 +1,93 @@
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import Groq from "groq-sdk"
 import { type NextRequest, NextResponse } from "next/server"
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
 export async function POST(request: NextRequest) {
   try {
     const { message, files, conversationHistory } = await request.json()
 
-    console.log("[Zyren] API received request:", {
+    console.log("[Zyren] API received request (Groq):", {
       message,
       files: files?.length || 0,
       historyLength: conversationHistory?.length || 0,
     })
 
-    if (!process.env.GEMINI_API_KEY) {
-      console.log("[Zyren] Missing Gemini API key")
+    if (!process.env.GROQ_API_KEY) {
+      console.log("[Zyren] Missing Groq API key")
       return NextResponse.json(
-        { error: "Gemini API key not configured. Please add GEMINI_API_KEY to your environment variables." },
+        { error: "Groq API key not configured. Please add GROQ_API_KEY to your environment variables." },
         { status: 500 },
       )
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+    const groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY,
+    })
 
-    const contentParts: any[] = []
+    // Build chat history correctly for Groq
+    const messages = (conversationHistory || [])
+      .filter((msg: any) => msg.content && msg.content.trim() !== "")
+      .map((msg: any) => ({
+        role: msg.sender === "user" ? "user" : "assistant",
+        content: msg.content,
+      }))
 
-    // Add conversation history for context (last 10 messages)
-    if (conversationHistory && conversationHistory.length > 0) {
-      let contextText = "You are Zyren, a helpful AI assistant. Here's our conversation history:\n"
-      const recentHistory = conversationHistory.slice(-10)
-      for (const msg of recentHistory) {
-        contextText += `${msg.sender === "user" ? "User" : "Zyren"}: ${msg.content}\n`
-      }
-      contextText += "\n"
-      contentParts.push({ text: contextText })
-    } else {
-      contentParts.push({ text: "You are Zyren, a helpful AI assistant. " })
+    // Add system message if not present
+    if (messages.length === 0 || messages[0].role !== "system") {
+      messages.unshift({
+        role: "system",
+        content: "You are Zyren, a helpful AI assistant. Provide concise and accurate responses.",
+      })
     }
 
-    // Handle file analysis with proper image support
+    // Ensure the last message is always from the user
+    let enrichedMessage = message || "Uploaded files for analysis"
     if (files && files.length > 0) {
-      let fileText = "The user has uploaded the following files:\n"
-
-      for (const file of files) {
-        if (file.base64Data && file.mimeType && file.mimeType.startsWith("image/")) {
-          // Add image to content parts for vision analysis
-          contentParts.push({
-            inlineData: {
-              data: file.base64Data,
-              mimeType: file.mimeType,
-            },
-          })
-          fileText += `- ${file.name} (${file.type}) - Image uploaded for analysis\n`
-        } else if (file.content) {
-          fileText += `- ${file.name} (${file.type}):\n${file.content}\n`
-        } else {
-          fileText += `- ${file.name} (${file.type})\n`
-        }
-      }
-
-      fileText +=
-        "\nPlease analyze these files and respond to the user's message in context of the uploaded content.\n\n"
-      contentParts.push({ text: fileText })
+      const fileNames = files.map((f: any) => f.name).join(", ")
+      enrichedMessage = `[User uploaded files: ${fileNames}]\n\n${enrichedMessage}`
     }
 
-    contentParts.push({ text: `User: ${message}\n\nZyren:` })
+    messages.push({
+      role: "user",
+      content: enrichedMessage,
+    })
 
-    console.log("[Zyren] Content parts prepared:", contentParts.length, "parts")
+    console.log("[Zyren] Calling Groq API with messages count:", messages.length)
 
-    const result = await model.generateContent(contentParts)
-    const response = await result.response
-    const text = response.text()
+    const completion = await groq.chat.completions.create({
+      messages: messages,
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.7,
+      max_completion_tokens: 1024,
+      top_p: 1,
+      stream: false,
+    })
 
-    console.log("[Zyren] Gemini response received, length:", text.length)
+    const responseText = completion.choices[0]?.message?.content || ""
 
-    return NextResponse.json({ response: text })
-  } catch (error) {
-    console.error("[Zyren] Gemini API error:", error)
+    console.log("[Zyren] Groq response received, length:", responseText.length)
+
+    return NextResponse.json({ response: responseText })
+  } catch (error: any) {
+    console.error("[Zyren] Groq API error details:", {
+      message: error.message,
+      name: error.name,
+      status: error?.status || error?.response?.status,
+      body: error?.error || error?.response?.data,
+    })
+    
+    let errorMessage = "Failed to generate response."
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    
+    // Check for specific common errors
+    if (error.status === 401) errorMessage = "Invalid Groq API Key. Please check your .env.local file."
+    if (error.status === 404) errorMessage = "The selected Groq model was not found."
+    if (error.status === 429) errorMessage = "Groq API rate limit exceeded. Please try again in a moment."
+
     return NextResponse.json(
-      {
-        error: `Failed to generate response: ${error instanceof Error ? error.message : "Unknown error"}. Please check your API key and try again.`,
-      },
-      { status: 500 },
+      { error: errorMessage },
+      { status: error.status || 500 },
     )
   }
 }

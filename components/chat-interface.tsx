@@ -72,6 +72,12 @@ export function ChatInterface() {
   const { speak, stop: stopSpeaking, isSpeaking, isSupported: textToSpeechSupported } = useTextToSpeech()
 
   useEffect(() => {
+    if (transcript && isListening) {
+      setInputValue(transcript)
+    }
+  }, [transcript, isListening])
+
+  useEffect(() => {
     if (searchQuery.trim()) {
       const results = messages.filter((message) => message.content.toLowerCase().includes(searchQuery.toLowerCase()))
       setSearchResults(results)
@@ -112,12 +118,6 @@ export function ChatInterface() {
     scrollToMessage(searchResults[newIndex].id)
   }
 
-  useEffect(() => {
-    if (transcript) {
-      setInputValue(transcript)
-    }
-  }, [transcript])
-
   const handleSendMessage = async () => {
     if (!inputValue.trim() && uploadedFiles.length === 0) return
 
@@ -149,7 +149,7 @@ export function ChatInterface() {
     try {
       const processedFiles = await Promise.all(
         filesToSend.map(async (file) => {
-          if (file.type.startsWith("image/")) {
+          if (file.type.startsWith("image/") && file.url) {
             // Convert image to base64
             const response = await fetch(file.url)
             const blob = await response.blob()
