@@ -2,7 +2,7 @@
 
 Your futuristic AI companion for chat, voice, and files.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://zyren-hhmdkri75-devansh-shuklas-projects-fca75b43.vercel.app/)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://zyren-ai-seven.vercel.app/)
 
 ## Overview
 
