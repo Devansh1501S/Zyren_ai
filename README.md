@@ -12,7 +12,7 @@ This repository contains the Zyren Chat application, a modern AI chat interface 
 
 Your project is live at:
 
-https://zyren-hhmdkri75-devansh-shuklas-projects-fca75b43.vercel.app/
+https://zyren-ai-seven.vercel.app/
 
 ## Features
 
